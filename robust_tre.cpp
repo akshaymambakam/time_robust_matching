@@ -89,6 +89,61 @@ timedrel::zone_set<T> time_robust_match_translation(timedrel::zone_set<T> &zs_in
     return zs_res;
 }
 
+/* Fully accurate when zones don't intersect */
+/* Gives a conservative estimate otherwise */
+template <typename T>
+T get_time_robustness_translation(timedrel::zone_set<T> &zs_in, T l, T u){
+    Variable x(0),y(1),delta(2);
+
+    T rob_value = 0;
+
+    /* Convert zones to robustness polyhedra */
+    for(auto z : zs_in){
+        Constraint_System cs;
+        mpq_class x_min(z.get_bmin().value);
+        mpq_class x_max(z.get_bmax().value);
+        mpq_class y_min(z.get_emin().value);
+        mpq_class y_max(z.get_emax().value);
+        mpq_class delta_min(z.get_dmin().value);
+        mpq_class delta_max(z.get_dmax().value);
+        mpq_class px(l);
+        mpq_class py(u);
+
+        /* Add zone constraints */
+        cs.insert(x_min.get_num() <= x*x_min.get_den());
+        cs.insert(y_min.get_num() <= y*y_min.get_den());
+        cs.insert(x_max.get_den()*x <= x_max.get_num());
+        cs.insert(y_max.get_den()*y <= y_max.get_num());
+        cs.insert(delta_min.get_num() <= y*delta_min.get_den()-x*delta_min.get_den());
+        cs.insert(y*delta_max.get_den()-x*delta_max.get_den() <= delta_max.get_num());
+
+        /* Add robustness constraints */
+        cs.insert(delta >= 0);
+        cs.insert(delta*x_min.get_den() <= x*x_min.get_den()-x_min.get_num());
+        cs.insert(delta*y_min.get_den() <= y*y_min.get_den()-y_min.get_num());
+        cs.insert(delta*x_max.get_den() <= x_max.get_num()-x*x_max.get_den());
+        cs.insert(delta*y_max.get_den() <= y_max.get_num()-y*y_max.get_den());
+
+        /* Add interval time point constraints */
+        cs.insert(x*px.get_den() == px.get_num());
+        cs.insert(y*py.get_den() == py.get_num());
+
+        C_Polyhedron phedra(cs);
+
+        if(!phedra.is_empty()){
+            Coefficient r_max_n, r_max_d;
+            bool maxim;
+            phedra.maximize(delta, r_max_n, r_max_d, maxim);
+            mpq_class rob_max(r_max_n, r_max_d);
+            if(rob_max.get_d() > rob_value){
+                rob_value = rob_max.get_d();
+            }
+        }
+    }
+
+    return rob_value;
+}
+
 template <typename T>
 void print_zone_set(timedrel::zone_set<T> &zs_in){
     std::cout<<"------"<<std::endl;
@@ -114,6 +169,7 @@ PYBIND11_MODULE(robust_tre, m) {
 
     m.def("trmtrans", &time_robust_match_translation<T>);
     m.def("zsetprint", &print_zone_set<T>);
+    m.def("trobustness", &get_time_robustness_translation<T>);
 
     py::class_<lower_bound_type>(m, "lower_bound")
         .def(py::init<T, bool>())
