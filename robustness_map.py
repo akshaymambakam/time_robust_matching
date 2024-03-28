@@ -16,6 +16,13 @@ def gen_rob_oracle(zset):
 zset = robust_tre.zone_set()
 zset.add_from_period(0,10)
 
+# Filter out points where robustness is less than rob_bound = 0.1
+rob_bound = 0.1
+zset_rob = robust_tre.trmtrans(zset, rob_bound)
+
+# Print the robust zone set
+robust_tre.zsetprint(zset_rob)
+
 # Get the time robustness (translation) oracle
 rob_oracle = gen_rob_oracle(zset)
 
