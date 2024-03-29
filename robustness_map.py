@@ -22,8 +22,9 @@ def gen_rob_oracle_opt(zset):
 # Create a match set of choice
 zset = robust_tre.zone_set()
 zset.add_from_period(0,10)
-zset.add_from_period(9,15)
+zset.add_from_period(10,15)
 zset.add_from_period(15.1,20)
+robust_tre.zsetprint(zset)
 
 # Filter out points where robustness is less than rob_bound = 0.1
 rob_bound = 0.1

@@ -144,14 +144,29 @@ T get_time_robustness_translation(timedrel::zone_set<T> &zs_in, T l, T u){
     return rob_value;
 }
 
+template <typename T>
+timedrel::zone_set<T> make_zone_set_boundaries_closed(timedrel::zone_set<T> &zs_in){
+    timedrel::zone_set<T> zs_res;
+    for(auto z : zs_in){
+        T cbmin = z.get_bmin().value;
+        T cbmax = z.get_bmax().value;
+        T cemin = z.get_emin().value;
+        T cemax = z.get_emax().value;
+        T cdmin = z.get_dmin().value;
+        T cdmax = z.get_dmax().value;
+        zs_res.add({cbmin,cbmax,cemin,cemax,cdmin,cdmax},{1,1,1,1,1,1});
+    }
+    return zs_res;
+}
+
 /* Fully accurate (hopefully) */
 template <typename T>
 T get_time_robustness_translation_optimal(timedrel::zone_set<T> &zs_in, T l, T u, T scope_start, T scope_end){
     T rob_value_right = 0, rob_value_left = 0, rob_value = 0;
     auto zs_line = timedrel::zone_set<T>();
     zs_line.add({scope_start,scope_end,scope_start,scope_end,u-l,u-l},{1,1,1,1,1,1});
-
-    auto zs_inter = timedrel::zone_set<T>::intersection(zs_in, zs_line);
+    auto zs_in_closed = make_zone_set_boundaries_closed<T>(zs_in);
+    auto zs_inter = timedrel::zone_set<T>::intersection(zs_in_closed, zs_line);
 
     std::vector<T> border_points_right, border_points_left;
     std::vector<T> eborder_points_right, eborder_points_left;
