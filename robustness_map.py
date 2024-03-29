@@ -4,17 +4,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Initialize scaling factor
-scaling = 100
+scaling = 1000
 # Define the duration of signal
 duration = 20
+# Initialize heat map display scope
+start_scope = 0
+end_scope   = 20
 
 # Function that returns the time robustness (translation) oracle from the match set
 def gen_rob_oracle(zset):
 	return lambda x,y: robust_tre.trobustness(zset,x,y)
 
+# Function that returns the optimal robustness (translation) oracle from the match set
+def gen_rob_oracle_opt(zset):
+	return lambda x,y: robust_tre.trobustness_opt(zset,x,y,start_scope,end_scope)
+
 # Create a match set of choice
 zset = robust_tre.zone_set()
 zset.add_from_period(0,10)
+zset.add_from_period(9,15)
+zset.add_from_period(15.1,20)
 
 # Filter out points where robustness is less than rob_bound = 0.1
 rob_bound = 0.1
@@ -24,7 +33,7 @@ zset_rob = robust_tre.trmtrans(zset, rob_bound)
 robust_tre.zsetprint(zset_rob)
 
 # Get the time robustness (translation) oracle
-rob_oracle = gen_rob_oracle(zset)
+rob_oracle = gen_rob_oracle_opt(zset)
 
 # generate 2 2d grids for the x & y bounds
 y, x = np.meshgrid(np.linspace(0, duration, scaling), np.linspace(0, duration, scaling))

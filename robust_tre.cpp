@@ -144,6 +144,97 @@ T get_time_robustness_translation(timedrel::zone_set<T> &zs_in, T l, T u){
     return rob_value;
 }
 
+/* Fully accurate (hopefully) */
+template <typename T>
+T get_time_robustness_translation_optimal(timedrel::zone_set<T> &zs_in, T l, T u, T scope_start, T scope_end){
+    T rob_value_right = 0, rob_value_left = 0, rob_value = 0;
+    auto zs_line = timedrel::zone_set<T>();
+    zs_line.add({scope_start,scope_end,scope_start,scope_end,u-l,u-l},{1,1,1,1,1,1});
+
+    auto zs_inter = timedrel::zone_set<T>::intersection(zs_in, zs_line);
+
+    std::vector<T> border_points_right, border_points_left;
+    std::vector<T> eborder_points_right, eborder_points_left;
+    /* Get points to the right and points to the left */
+    for(auto z : zs_inter){
+        T sp = z.get_bmin().value;
+        T ep = z.get_bmax().value;
+        T esp = z.get_emin().value;
+        T eep = z.get_emax().value;
+        if(sp >= l){
+            border_points_right.push_back(sp);
+            eborder_points_right.push_back(esp);
+        }
+        if(ep >= l){
+            border_points_right.push_back(ep);
+            eborder_points_right.push_back(eep);
+        }
+        if(sp <= l){
+            border_points_left.push_back(sp);
+            eborder_points_left.push_back(esp);
+        }
+        if(ep <= l){
+            border_points_left.push_back(ep);
+            eborder_points_left.push_back(eep);
+        }
+    }
+    sort(border_points_right.begin(), border_points_right.end());
+    sort(border_points_left.begin(), border_points_left.end());
+
+    T old_point = l;
+    T new_point = l;
+    T eold_point = u;
+    T enew_point = u;
+    /* Compute robustness to the right */
+    for(int i=0; i < border_points_right.size(); i++){
+        new_point = border_points_right[i];
+        enew_point = eborder_points_right[i];
+        auto zs_segment = timedrel::zone_set<T>();
+        zs_segment.add({old_point, new_point,
+            eold_point, enew_point,
+            u-l,u-l},{1,1,1,1,1,1});
+
+        if(timedrel::zone_set<T>::includes(zs_inter, zs_segment)){
+            old_point = new_point;
+            eold_point = enew_point;
+        }else{
+            break;
+        }
+    }
+    /* Assign robustness value to the right */
+    rob_value_right = old_point - l;
+
+    old_point = l;
+    new_point = l;
+    eold_point = u;
+    enew_point = u;
+    /* Compute robustness to the left */
+    int i = border_points_left.size() - 1;
+    while(i >= 0){
+        new_point = border_points_left[i];
+        enew_point = eborder_points_left[i];
+        auto zs_segment = timedrel::zone_set<T>();
+        zs_segment.add({new_point, old_point,
+            enew_point, eold_point,
+            u-l,u-l},{1,1,1,1,1,1});
+
+        if(timedrel::zone_set<T>::includes(zs_inter, zs_segment)){
+            old_point = new_point;
+            eold_point = enew_point;
+        }else{
+            break;
+        }
+        i--;
+    }
+    /* Assign robustness value to the left */
+    rob_value_left = l - old_point;
+
+    /* Assign robustness value */
+    rob_value = (rob_value_right > rob_value_left)?rob_value_left:rob_value_right;
+
+    return rob_value;
+}
+
 template <typename T>
 void print_zone_set(timedrel::zone_set<T> &zs_in){
     std::cout<<"------"<<std::endl;
@@ -170,6 +261,7 @@ PYBIND11_MODULE(robust_tre, m) {
     m.def("trmtrans", &time_robust_match_translation<T>);
     m.def("zsetprint", &print_zone_set<T>);
     m.def("trobustness", &get_time_robustness_translation<T>);
+    m.def("trobustness_opt", &get_time_robustness_translation_optimal<T>);
 
     py::class_<lower_bound_type>(m, "lower_bound")
         .def(py::init<T, bool>())
