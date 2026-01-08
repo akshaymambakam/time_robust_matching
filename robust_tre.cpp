@@ -201,20 +201,17 @@ T get_time_robustness_translation_optimal(timedrel::zone_set<T> &zs_in, T l, T u
     T eold_point = u;
     T enew_point = u;
     /* Compute robustness to the right */
-    for(int i=0; i < border_points_right.size(); i++){
+    int i = 0
+    while (i < border_points_right.size() and timedrel::zone_set<T>::includes(zs_inter, zs_segment)){
         new_point = border_points_right[i];
         enew_point = eborder_points_right[i];
         auto zs_segment = timedrel::zone_set<T>();
         zs_segment.add({old_point, new_point,
             eold_point, enew_point,
             u-l,u-l},{1,1,1,1,1,1});
-
-        if(timedrel::zone_set<T>::includes(zs_inter, zs_segment)){
-            old_point = new_point;
-            eold_point = enew_point;
-        }else{
-            break;
-        }
+        old_point = new_point;
+        eold_point = enew_point;
+        i++
     }
     /* Assign robustness value to the right */
     rob_value_right = old_point - l;
@@ -225,20 +222,15 @@ T get_time_robustness_translation_optimal(timedrel::zone_set<T> &zs_in, T l, T u
     enew_point = u;
     /* Compute robustness to the left */
     int i = border_points_left.size() - 1;
-    while(i >= 0){
+    while(i >= 0 and timedrel::zone_set<T>::includes(zs_inter, zs_segment)){
         new_point = border_points_left[i];
         enew_point = eborder_points_left[i];
         auto zs_segment = timedrel::zone_set<T>();
         zs_segment.add({new_point, old_point,
             enew_point, eold_point,
             u-l,u-l},{1,1,1,1,1,1});
-
-        if(timedrel::zone_set<T>::includes(zs_inter, zs_segment)){
-            old_point = new_point;
-            eold_point = enew_point;
-        }else{
-            break;
-        }
+        old_point = new_point;
+        eold_point = enew_point;
         i--;
     }
     /* Assign robustness value to the left */
